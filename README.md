@@ -22,3 +22,15 @@ Este projeto monitora o preço de um produto online e envia um alerta por e-mail
 ```bash
 git clone https://github.com/matheusrodrigues1711/monitor-precos.git
 cd monitor-precos
+Instale as dependências
+pip install requests beautifulsoup4 python-dotenv
+3. Configure o arquivo .env
+
+Crie um arquivo .env na raiz do projeto:
+
+EMAIL_SENHA=sua_senha_ou_token
+
+⚠️ Nunca compartilhe esse arquivo publicamente.
+
+4. Execute o projeto
+python seu_arquivo.py
