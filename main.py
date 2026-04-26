@@ -1,18 +1,57 @@
 import requests
 import smtplib
+import mysql.connector
+import os
 from bs4 import BeautifulSoup
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-
-EMAIL_REMETENTE = input("Insira seu email: ")
+from datetime import datetime
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
+EMAIL_REMETENTE = input("Insira seu email: ")
 EMAIL_SENHA = os.getenv("EMAIL_SENHA")
+EMAIL_DESTINATARIO = input("Insira o email do destinatário: ")
 
-EMAIL_DESTINATARIO = input("Insira o email do destinatário: " )
+def conectar_banco():
+    return mysql.connector.connect(
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME")
+    )
+
+def salvar_preco(url, preco, preco_limite):
+    conn = conectar_banco()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO historico_precos (url, preco, preco_limite)
+        VALUES (%s, %s, %s)
+    """, (url, preco, preco_limite))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+    print("Preço salvo no histórico!")
+
+def buscar_historico(url):
+    conn = conectar_banco()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT preco, data_verificacao 
+        FROM historico_precos 
+        WHERE url = %s 
+        ORDER BY data_verificacao DESC 
+        LIMIT 10
+    """, (url,))
+
+    historico = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return historico
 
 def buscar_preco(url):
     headers = {
@@ -62,6 +101,15 @@ def monitorar(url, preco_limite):
 
     print(f"Preço encontrado: R$ {preco_atual}")
     print(f"Seu limite: R$ {preco_limite}\n")
+
+    salvar_preco(url, preco_atual, preco_limite)
+
+    historico = buscar_historico(url)
+    if len(historico) > 1:
+        print("Histórico de preços:")
+        for preco, data in historico:
+            print(f"  R$ {preco} — {data.strftime('%d/%m/%Y %H:%M')}")
+        print()
 
     if preco_atual < preco_limite:
         print("ALERTA! Preço abaixo do limite!")
